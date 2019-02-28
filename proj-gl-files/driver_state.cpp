@@ -41,38 +41,61 @@ void initialize_render(driver_state& state, int width, int height)
 //   render_type::strip -    The vertices are to be interpreted as a triangle strip.
 void render(driver_state& state, render_type type)
 {
-    //std::cout<<"TODO: implement rendering."<<std::endl;
+    //std::cout<< "num_triangles = " << state.num_triangles <<std::endl;
 
+    //std::cout<<"TODO: implement rendering."<<std::endl;
+    int count = 0;
     switch (type)
     {
 	case render_type::triangle:
-    	{
-		data_vertex ver_data;
-	       ver_data.data = new float[MAX_FLOATS_PER_VERTEX];
-		const data_geometry *g[3];
-		data_geometry g_ar[3];
-		data_geometry geo[3];
-		for (size_t i = 0; i < 3 ; i++)
 		{
-  			
-			for (size_t j = 0; j < state.floats_per_vertex; j++)
-			{
-				ver_data.data[j] = state.vertex_data[(state.floats_per_vertex * i) + j];
-			}
-			state.vertex_shader(ver_data,geo[i],state.uniform_data);
-			geo[i].gl_Position /= geo[i].gl_Position[3];
+//		std::cout << "triangles = " <<  (state.num_vertices / 3) << std::endl;
+//		std::cout << "num_vertices = " <<  state.num_vertices << std::endl;
+//		std::cout << "floats_vertex = " <<  state.floats_per_vertex << std::endl;
+                /*for (int i = 0; i < 36 ; i++)
+		{
+			std::cout << "float [" << i << "] = " << state.vertex_data[i] << std::endl;
+		}*/
 
-			g[i] = &geo[i];
+		//count++;
+
+		for (int k = 0 ; k <  (state.num_vertices / 3); k++)
+		{
+			data_vertex ver_data;
+	        	ver_data.data = new float[MAX_FLOATS_PER_VERTEX];
+			const data_geometry *g[3];
+			data_geometry geo[3];
+			for (size_t i = 0; i < 3 ; i++)
+			{
+				for (size_t j = 0; j < state.floats_per_vertex; j++)
+				{
+					//std::cout << "index = " << ((state.floats_per_vertex * 3) * k) + (state.floats_per_vertex * i) + j << std::endl;
+					ver_data.data[j] = state.vertex_data[((state.floats_per_vertex * 3) * k) + (state.floats_per_vertex * i) + j];
+				}
+				state.vertex_shader(ver_data,geo[i],state.uniform_data);
+				geo[i].gl_Position /= geo[i].gl_Position[3];
+
+				g[i] = &geo[i];
+			}
+			rasterize_triangle(state,g);
 		}
-		rasterize_triangle(state,g);
-		//delete geo[];
-	}
+		break;	
+    		}
 	case render_type::indexed:
-	{}
+		{
+		break;
+    		}
 	case render_type::fan:
-	{}
+		{
+		//std::cout << "fan count = " << count << std::endl;
+		break;
+    		}	
 	case render_type::strip:
-	{}
+		{
+		//std::cout << "strip count = " << count << std::endl;
+		break;
+    			
+		}
     }
 
 }
