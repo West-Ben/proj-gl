@@ -83,20 +83,49 @@ void render(driver_state& state, render_type type)
 				}
 				geo[i].data = new float[MAX_FLOATS_PER_VERTEX];
 				state.vertex_shader(ver_data,geo[i],state.uniform_data);
-
 				//geo[i].gl_Position /= geo[i].gl_Position[3];
-
+				
+				
 				g[i] = &geo[i];
 			}
-			clip_triangle(state,g,);
+			
+			//std::cout<<"geo[0]->gl_Position[3] = " << geo[0].gl_Position[3]<<std::endl;
+			//std::cout<<"geo[1]->gl_Position[3] = " << geo[1].gl_Position[3]<<std::endl;
+			//std::cout<<"geo[2]->gl_Position[3] = " << geo[2].gl_Position[3]<<std::endl;
+			clip_triangle(state,g,0);
 			//delete geo;
 		}
 		break;	
-    		}
+    	}
 	case render_type::indexed:
 		{
-		break;
-    		}
+			for (int k = 0 ; k <  state.num_triangles; k++)
+			{
+				data_vertex ver_data;
+				ver_data.data = new float[MAX_FLOATS_PER_VERTEX];
+				
+				const data_geometry *g[3];
+				data_geometry geo[3];
+				
+
+				for (size_t i = 0; i < 3 ; i++)
+				{
+					for(int j = 0; j < state.floats_per_vertex; j++)
+					{
+						ver_data.data[j] = state.vertex_data[state.index_data[(k * 3) + i] + j];
+					}
+
+					
+					geo[i].data = new float[MAX_FLOATS_PER_VERTEX];
+					state.vertex_shader(ver_data,geo[i],state.uniform_data);
+					
+					g[i] = &geo[i];
+				}
+				
+				clip_triangle(state,g,0);
+			}
+			break;
+    	}
 	case render_type::fan:
 		{
 		//std::cout << "fan count = " << count << std::endl;
@@ -119,417 +148,279 @@ void render(driver_state& state, render_type type)
 // simply pass the call on to rasterize_triangle.
 void clip_triangle(driver_state& state, const data_geometry* in[3],int face)
 {
+	data_geometry geo[3];
+    const data_geometry *g[3];
+	
     if(face==6)
     {
-        rasterize_triangle(state, in);
+		for (int i = 0; i < 3; i++)
+		{
+			geo[i].data = in[i]->data;
+			geo[i].gl_Position = (in[i]->gl_Position / in[i]->gl_Position[3]);
+			
+			g[i] = &geo[i];
+		}
+		
+        rasterize_triangle(state, g);
         return;
     }
-    
+
+	//std::cout<<"Sin[0]->gl_Position[3] = " << in[0]->gl_Position[3]<<std::endl;
+	//std::cout<<"Sin[1]->gl_Position[3] = " << in[1]->gl_Position[3]<<std::endl;
+	//std::cout<<"Sin[2]->gl_Position[3] = " << in[2]->gl_Position[3]<<std::endl;
     float alpha, bravo, charlie;
-    data_geometry geo[3];
-    const data_geometry *g = new data_geometry[3];
-    geo.data = new float[MAX_FLOATS_PER_VERTEX];
+	vec4 Pa, Pb, Pc;
 
-    switch (face)
-    {
-	case 1: // -X
-		if (in[0]->gl_Position[0] < (-in[0]->gl_Position[3]))
-		{	
-			bravo = (((-in[0]->gl_Position[3]) - in[0]->gl_Position[0])/(in[1]->gl_Position[0] + in[1]->gl_Position[3] - in[0]->gl_Position[3] - in[0]->gl_Position[0]));
-			charlie = (((-in[0]->gl_Position[3]) - in[0]->gl_Position[0])/(in[2]->gl_Position[0] + in[2]->gl_Position[3] - in[0]->gl_Position[3] - in[0]->gl_Position[0]));
-			
-			geo[0].data[0] = charlie /in[0]->gl_Position[3];
-			geo[0].data[1] = in[0]->gl_Position[1] /in[0]->gl_Position[3];
-			geo[0].data[2] = in[0]->gl_Position[2] /in[0]->gl_Position[3];
-
-			geo[1].data[0] = bravo /in[1]->gl_Position[3];
-			geo[1].data[1] = in[1]->gl_Position[1] /in[1]->gl_Position[3];
-			geo[1].data[2] = in[1]->gl_Position[2] /in[1]->gl_Position[3];
-
-			geo[2].data[0] = in[2]->gl_Position[0] /in[2]->gl_Position[3];
-			geo[2].data[1] = in[2]->gl_Position[1] /in[2]->gl_Position[3];
-			geo[2].data[2] = in[2]->gl_Position[2] /in[2]->gl_Position[3];
-		}
-		else if (in[1]->gl_Position[0] < (-in[1]->gl_Position[3]))
-		{
-			alpha = (((-in[1]->gl_Position[3]) - in[1]->gl_Position[0])/(in[0]->gl_Position[0] + in[0]->gl_Position[3] - in[1]->gl_Position[3] - in[1]->gl_Position[0]));
-			charlie = (((-in[1]->gl_Position[3]) - in[1]->gl_Position[0])/(in[2]->gl_Position[0] + in[2]->gl_Position[3] - in[1]->gl_Position[3] - in[1]->gl_Position[0]));
-		
-			geo[0].data[0] = in[0]->gl_Position[0] /in[0]->gl_Position[3];
-			geo[0].data[1] = in[0]->gl_Position[1] /in[0]->gl_Position[3];
-			geo[0].data[2] = in[0]->gl_Position[2] /in[0]->gl_Position[3];
-
-			geo[1].data[0] = alpha /in[1]->gl_Position[3];
-			geo[1].data[1] = in[1]->gl_Position[1] /in[1]->gl_Position[3];
-			geo[1].data[2] = in[1]->gl_Position[2] /in[1]->gl_Position[3];
-
-			geo[2].data[0] = charlie /in[2]->gl_Position[3];
-			geo[2].data[1] = in[2]->gl_Position[1] /in[2]->gl_Position[3];
-			geo[2].data[2] = in[2]->gl_Position[2] /in[2]->gl_Position[3];
-		
-		}
-		else if (in[2]->gl_Position[0] < (-in[2]->gl_Position[3]))
-		{	
-			alpha = (((-in[2]->gl_Position[3]) - in[2]->gl_Position[0])/(in[0]->gl_Position[0] + in[0]->gl_Position[3] - in[2]->gl_Position[3] - in[2]->gl_Position[0]));
-			bravo = (((-in[2]->gl_Position[3]) - in[2]->gl_Position[0])/(in[1]->gl_Position[0] + in[1]->gl_Position[3] - in[2]->gl_Position[3] - in[2]->gl_Position[0]));
-
-			geo[0].data[0] = alpha / in[0]->gl_Position[3];
-			geo[0].data[1] = in[0]->gl_Position[1] / in[0]->gl_Position[3];
-			geo[0].data[2] = in[0]->gl_Position[2] / in[0]->gl_Position[3];
-
-			geo[1].data[0] = in[1]->gl_Position[0] / in[1]->data[3];
-			geo[1].data[1] = in[1]->gl_Position[1] / in[1]->data[3];
-			geo[1].data[2] = in[1]->gl_Position[2] / in[1]->gl_Position[3];
-
-			geo[2].data[0] = bravo / in[2]->data[3];
-			geo[2].data[1] = in[2]->data[1] /in[2]->data[3];
-			geo[2].data[2] = in[2]->data[2] /in[2]->data[3];
-			
-		}
-
-		for (int i = 0; i < 3; i++ )
-		{
-			for (int j = 3; j < state.floats_per_vertex; j++)
-			{
-				geo[i].data[j] = in[i]->data[j];
-			}
-			g[i] = &geo[i];
-		}
-
-		break;
-	case 0:   // +X
-		if (in[0]->data[0] <= in[0]->data[3])
-		{	
-			bravo = ((in[0]->data[3] - in[0]->data[0])/(in[1]->data[0] - in[1]->data[3] + in[0]->data[3] - in[0]->data[0]));
-			charlie = ((in[0]->data[3] - in[0]->data[0])/(in[2]->data[0] - in[2]->data[3] + in[0]->data[3] - in[0]->data[0]));
-			
-			geo[0].data[0] = charlie /in[0]->data[3];
-			geo[0].data[1] = in[0]->data[1] /in[0]->data[3];
-			geo[0].data[2] = in[0]->data[2] /in[0]->data[3];
-
-			geo[1].data[0] = bravo /in[1]->data[3];
-			geo[1].data[1] = in[1]->data[1] /in[1]->data[3];
-			geo[1].data[2] = in[1]->data[2] /in[1]->data[3];
-
-			geo[2].data[0] = in[2]->data[0] /in[2]->data[3];
-			geo[2].data[1] = in[2]->data[1] /in[2]->data[3];
-			geo[2].data[2] = in[2]->data[2] /in[2]->data[3];
-		}
-		else if (in[1]->data[0] <= in[1]->data[3])
-		{
-			alpha = ((in[1]->data[3] - in[1]->data[0])/(in[0]->data[0] - in[0]->data[3] + in[1]->data[3] - in[1]->data[0]));
-			charlie = ((in[1]->data[3] - in[1]->data[0])/(in[2]->data[0] - in[2]->data[3] + in[1]->data[3] - in[1]->data[0]));
-		
-			geo[0].data[0] = in[0]->data[0] /in[0]->data[3];
-			geo[0].data[1] = in[0]->data[1] /in[0]->data[3];
-			geo[0].data[2] = in[0]->data[2] /in[0]->data[3];
-
-			geo[1].data[0] = alpha /in[1]->data[3];
-			geo[1].data[1] = in[1]->data[1] /in[1]->data[3];
-			geo[1].data[2] = in[1]->data[2] /in[1]->data[3];
-
-			geo[2].data[0] = charlie /in[2]->data[3];
-			geo[2].data[1] = in[2]->data[1] /in[2]->data[3];
-			geo[2].data[2] = in[2]->data[2] /in[2]->data[3];
-		
-		}
-		else if (in[2]->data[0] <= in[2]->data[3])
-		{	
-			alpha = ((in[2]->data[3] - in[2]->data[0])/(in[0]->data[0] - in[0]->data[3] + in[2]->data[3] - in[2]->data[0]));
-			bravo = ((in[2]->data[3] - in[2]->data[0])/(in[1]->data[0] - in[1]->data[3] + in[2]->data[3] - in[2]->data[0]));
+    int axis;
+	int sign;
 	
-			geo[0].data[0] = alpha / in[0]->data[3];
-			geo[0].data[1] = in[0]->data[1] / in[0]->data[3];
-			geo[0].data[2] = in[0]->data[2] / in[0]->data[3];
+	for (int i = 0; i < 3; i++ )
+	{
+		geo[i].data = in[i]->data;
+	}
 
-			geo[1].data[0] = in[1]->data[0] / in[1]->data[3];
-			geo[1].data[1] = in[1]->data[1] / in[1]->data[3];
-			geo[1].data[2] = in[1]->data[2] / in[1]->data[3];
 
-			geo[2].data[0] = bravo / in[2]->data[3];
-			geo[2].data[1] = in[2]->data[1] /in[2]->data[3];
-			geo[2].data[2] = in[2]->data[2] /in[2]->data[3];
-			
-		}
-
-		for (int i = 0; i < 3; i++ )
-		{
-			for (int j = 3; j < state.floats_per_vertex; j++)
-			{
-				geo[i].data[j] = in[i]->data[j];
-			}
-			g[i] = &geo[i];
-		}
+	switch (face)
+	{
+		case 0:
+			axis = 0;
+			sign = 1;
 		break;
-	case 2: // +Y
- 		if (in[0]->data[1] <= in[0]->data[3])
-		{	
-			bravo = ((in[0]->data[3] - in[0]->data[1])/(in[1]->data[1] - in[1]->data[3] + in[0]->data[3] - in[0]->data[1]));
-			charlie = ((in[0]->data[3] - in[0]->data[1])/(in[2]->data[1] - in[2]->data[3] + in[0]->data[3] - in[0]->data[1]));
-			
-			geo[0].data[0] = in[0]->data[0] /in[0]->data[3];
-			geo[0].data[1] =  charlie /in[0]->data[3];
-			geo[0].data[2] = in[0]->data[2] /in[0]->data[3];
-
-			geo[1].data[0] = in[1]->data[0] /in[1]->data[3];
-			geo[1].data[1] = bravo /in[1]->data[3];
-			geo[1].data[2] = in[1]->data[2] /in[1]->data[3];
-
-			geo[2].data[0] = in[2]->data[0] /in[2]->data[3];
-			geo[2].data[1] = in[2]->data[1] /in[2]->data[3];
-			geo[2].data[2] = in[2]->data[2] /in[2]->data[3];
-		}
-		else if (in[1]->data[1] <= in[1]->data[3])
-		{
-			alpha = ((in[1]->data[3] - in[1]->data[1])/(in[0]->data[1] - in[0]->data[3] + in[1]->data[3] - in[1]->data[1]));
-			charlie = ((in[1]->data[3] - in[1]->data[1])/(in[2]->data[1] - in[2]->data[3] + in[1]->data[3] - in[1]->data[1]));
-		
-			geo[0].data[0] = in[0]->data[0] /in[0]->data[3];
-			geo[0].data[1] = in[0]->data[1] /in[0]->data[3];
-			geo[0].data[2] = in[0]->data[2] /in[0]->data[3];
-
-			geo[1].data[0] = in[1]->data[0] /in[1]->data[3]; 
-			geo[1].data[1] = alpha /in[1]->data[3];
-			geo[1].data[2] = in[1]->data[2] /in[1]->data[3];
-
-			geo[2].data[0] = in[2]->data[0] /in[2]->data[3];
-			geo[2].data[1] =  charlie /in[2]->data[3];
-			geo[2].data[2] = in[2]->data[2] /in[2]->data[3];
-		
-		}
-		else if (in[2]->data[1] <= in[2]->data[3])
-		{	
-			alpha = ((in[2]->data[3] - in[2]->data[1])/(in[0]->data[1] - in[0]->data[3] + in[2]->data[3] - in[2]->data[1]));
-			bravo = ((in[2]->data[3] - in[2]->data[1])/(in[1]->data[1] - in[1]->data[3] + in[2]->data[3] - in[2]->data[1]));
-	
-			geo[0].data[0] = in[0]->data[0] / in[0]->data[3]; 
-			geo[0].data[1] = alpha / in[0]->data[3];
-			geo[0].data[2] = in[0]->data[2] / in[0]->data[3];
-
-			geo[1].data[0] = in[1]->data[0] / in[1]->data[3];
-			geo[1].data[1] = in[1]->data[1] / in[1]->data[3];
-			geo[1].data[2] = in[1]->data[2] / in[1]->data[3];
-
-			geo[2].data[0] = in[2]->data[0] / in[2]->data[3]; 
-			geo[2].data[1] = bravo / in[2]->data[3];
-			geo[2].data[2] = in[2]->data[2] /in[2]->data[3];
-			
-		}
-
-		for (int i = 0; i < 3; i++ )
-		{
-			for (int j = 3; j < state.floats_per_vertex; j++)
-			{
-				geo[i].data[j] = in[i]->data[j];
-			}
-			g[i] = &geo[i];
-		}
-
+		case 1:
+			axis = 0;
+			sign = -1;
 		break;
-	case 3: // -Y
-		if (in[0]->data[1] < (-in[0]->data[3]))
-		{	
-			bravo = (((-in[0]->data[3]) - in[0]->data[1])/(in[1]->data[1] + in[1]->data[3] - in[0]->data[3] - in[0]->data[1]));
-			charlie = (((-in[0]->data[3]) - in[0]->data[1])/(in[2]->data[1] + in[2]->data[3] - in[0]->data[3] - in[0]->data[1]));
-			
-			geo[0].data[0] = in[0]->data[0] /in[0]->data[3]; 
-			geo[0].data[1] = charlie /in[0]->data[3];
-			geo[0].data[2] = in[0]->data[2] /in[0]->data[3];
-
-			geo[1].data[0] = in[1]->data[0] /in[1]->data[3]; 
-			geo[1].data[1] = bravo /in[1]->data[3];
-			geo[1].data[2] = in[1]->data[2] /in[1]->data[3];
-
-			geo[2].data[0] = in[2]->data[0] /in[2]->data[3];
-			geo[2].data[1] = in[2]->data[1] /in[2]->data[3];
-			geo[2].data[2] = in[2]->data[2] /in[2]->data[3];
-		}
-		else if (in[1]->data[1] < (-in[1]->data[3]))
-		{
-			alpha = (((-in[1]->data[3]) - in[1]->data[1])/(in[0]->data[1] + in[0]->data[3] - in[1]->data[3] - in[1]->data[1]));
-			charlie = (((-in[1]->data[3]) - in[1]->data[1])/(in[2]->data[1] + in[2]->data[3] - in[1]->data[3] - in[1]->data[1]));
-		
-			geo[0].data[0] = in[0]->data[0] /in[0]->data[3];
-			geo[0].data[1] = in[0]->data[1] /in[0]->data[3];
-			geo[0].data[2] = in[0]->data[2] /in[0]->data[3];
-
-			geo[1].data[0] = in[1]->data[0] /in[1]->data[3]; 
-			geo[1].data[1] = alpha /in[1]->data[3];
-			geo[1].data[2] = in[1]->data[2] /in[1]->data[3];
-
-			geo[2].data[0] = in[2]->data[0] /in[2]->data[3]; 
-			geo[2].data[1] = charlie /in[2]->data[3];
-			geo[2].data[2] = in[2]->data[2] /in[2]->data[3];
-		
-		}
-		else if (in[2]->data[1] < (-in[2]->data[3]))
-		{	
-			alpha = (((-in[2]->data[3]) - in[2]->data[1])/(in[0]->data[1] + in[0]->data[3] - in[2]->data[3] - in[2]->data[1]));
-			bravo = (((-in[2]->data[3]) - in[2]->data[1])/(in[1]->data[1] + in[1]->data[3] - in[2]->data[3] - in[2]->data[1]));
-	
-			geo[0].data[0] = in[0]->data[0] / in[0]->data[3]; 
-			geo[0].data[1] = alpha / in[0]->data[3];
-			geo[0].data[2] = in[0]->data[2] / in[0]->data[3];
-
-			geo[1].data[0] = in[1]->data[0] / in[1]->data[3];
-			geo[1].data[1] = in[1]->data[1] / in[1]->data[3];
-			geo[1].data[2] = in[1]->data[2] / in[1]->data[3];
-
-			geo[2].data[0] = in[2]->data[0] /in[2]->data[3];
-			geo[2].data[1] =  bravo / in[2]->data[3];
-			geo[2].data[2] = in[2]->data[2] /in[2]->data[3];
-			
-		}
-
-		for (int i = 0; i < 3; i++ )
-		{
-			for (int j = 3; j < state.floats_per_vertex; j++)
-			{
-				geo[i].data[j] = in[i]->data[j];
-			}
-			g[i] = &geo[i];
-		}
-
-
+		case 2:
+			axis = 1;
+			sign = 1;
 		break;
-	case 4: // +Z
- 		if (in[0]->data[2] <= in[0]->data[3])
-		{	
-			bravo = ((in[0]->data[3] - in[0]->data[2])/(in[1]->data[2] - in[1]->data[3] + in[0]->data[3] - in[0]->data[2]));
-			charlie = ((in[0]->data[3] - in[0]->data[2])/(in[2]->data[2] - in[2]->data[3] + in[0]->data[3] - in[0]->data[2]));
-			
-			geo[0].data[0] = in[0]->data[0] /in[0]->data[3];
-			geo[0].data[1] = in[0]->data[1] /in[0]->data[3]; 
-			geo[0].data[2] =  charlie /in[0]->data[3];
-
-			geo[1].data[0] = in[1]->data[0] /in[1]->data[3];
-			geo[1].data[1] = in[1]->data[1] /in[1]->data[3];
-			geo[1].data[2] =  bravo /in[1]->data[3];
-
-			geo[2].data[0] = in[2]->data[0] /in[2]->data[3];
-			geo[2].data[1] = in[2]->data[1] /in[2]->data[3];
-			geo[2].data[2] = in[2]->data[2] /in[2]->data[3];
-		}
-		else if (in[1]->data[2] <= in[1]->data[3])
-		{
-			alpha = ((in[1]->data[3] - in[1]->data[2])/(in[0]->data[2] - in[0]->data[3] + in[1]->data[3] - in[1]->data[2]));
-			charlie = ((in[1]->data[3] - in[1]->data[2])/(in[2]->data[2] - in[2]->data[3] + in[1]->data[3] - in[1]->data[2]));
-		
-			geo[0].data[0] = in[0]->data[0] /in[0]->data[3];
-			geo[0].data[1] = in[0]->data[1] /in[0]->data[3];
-			geo[0].data[2] = in[0]->data[2] /in[0]->data[3];
-
-			geo[1].data[0] = in[1]->data[0] /in[1]->data[3]; 
-			geo[1].data[1] = in[1]->data[1] /in[1]->data[3]; 
-			geo[1].data[2] = alpha /in[1]->data[3];
-
-			geo[2].data[0] = in[2]->data[0] /in[2]->data[3];
-			geo[2].data[1] = in[2]->data[1] /in[2]->data[3]; 
-			geo[2].data[2] =  charlie /in[2]->data[3];
-		
-		}
-		else if (in[2]->data[2] <= in[2]->data[3])
-		{	
-			alpha = ((in[2]->data[3] - in[2]->data[2])/(in[0]->data[2] - in[0]->data[3] + in[2]->data[3] - in[2]->data[2]));
-			bravo = ((in[2]->data[3] - in[2]->data[2])/(in[1]->data[2] - in[1]->data[3] + in[2]->data[3] - in[2]->data[2]));
-	
-			geo[0].data[0] = in[0]->data[0] / in[0]->data[3]; 
-			geo[0].data[1] = in[0]->data[1] / in[0]->data[3];
-			geo[0].data[2] =  alpha / in[0]->data[3];
-
-			geo[1].data[0] = in[1]->data[0] / in[1]->data[3];
-			geo[1].data[1] = in[1]->data[1] / in[1]->data[3];
-			geo[1].data[2] = in[1]->data[2] / in[1]->data[3];
-
-			geo[2].data[0] = in[2]->data[0] / in[2]->data[3]; 
-			geo[2].data[1] = in[2]->data[1] / in[2]->data[3];
-			geo[2].data[2] =  bravo / in[2]->data[3];
-			
-		}
-
-		for (int i = 0; i < 3; i++ )
-		{
-			for (int j = 3; j < state.floats_per_vertex; j++)
-			{
-				geo[i].data[j] = in[i]->data[j];
-			}
-			g[i] = &geo[i];
-		}
-
-
+		case 3:
+			axis = 1;
+			sign = -1;
 		break;
-	case 5: // -Z
-		if (in[0]->data[2] < (-in[0]->data[3]))
-		{	
-			bravo = (((-in[0]->data[3]) - in[0]->data[2])/(in[1]->data[2] + in[1]->data[3] - in[0]->data[3] - in[0]->data[2]));
-			charlie = (((-in[0]->data[3]) - in[0]->data[2])/(in[2]->data[2] + in[2]->data[3] - in[0]->data[3] - in[0]->data[2]));
-			
-			geo[0].data[0] = in[0]->data[0] /in[0]->data[3]; 
-			geo[0].data[1] = in[0]->data[1] /in[0]->data[3];
-			geo[0].data[2] =  charlie /in[0]->data[3];
+		case 4:
+			axis = 2;
+			sign = 1;
+		break;
+		case 5:
+			axis = 2;
+			sign = -1;
+		break;
+	}
 
-			geo[1].data[0] = in[1]->data[0] /in[1]->data[3]; 
-			geo[1].data[1] = in[1]->data[1] /in[1]->data[3];
-			geo[1].data[2] =  bravo /in[1]->data[3];
+	int abc[3];
 
-			geo[2].data[0] = in[2]->data[0] /in[2]->data[3];
-			geo[2].data[1] = in[2]->data[1] /in[2]->data[3];
-			geo[2].data[2] = in[2]->data[2] /in[2]->data[3];
-		}
-		else if (in[1]->data[2] < (-in[1]->data[3]))
+	if (sign == 1)
+	{
+		for (int vert = 0; vert < 3; vert++)
 		{
-			alpha = (((-in[1]->data[3]) - in[1]->data[2])/(in[0]->data[2] + in[0]->data[3] - in[1]->data[3] - in[1]->data[2]));
-			charlie = (((-in[1]->data[3]) - in[1]->data[2])/(in[2]->data[2] + in[2]->data[3] - in[1]->data[3] - in[1]->data[2]));
-		
-			geo[0].data[0] = in[0]->data[0] /in[0]->data[3];
-			geo[0].data[1] = in[0]->data[1] /in[0]->data[3];
-			geo[0].data[2] = in[0]->data[2] /in[0]->data[3];
-
-			geo[1].data[0] = in[1]->data[0] /in[1]->data[3]; 
-			geo[1].data[1] = in[1]->data[1] /in[1]->data[3]; 
-			geo[1].data[2] = alpha /in[1]->data[3];
-
-			geo[2].data[0] = in[2]->data[0] /in[2]->data[3]; 
-			geo[2].data[1] = in[2]->data[1] /in[2]->data[3];
-			geo[2].data[2] =  charlie /in[2]->data[3];
-		
+			//std::cout << " in["<< vert <<"]->gl_Position["<< axis <<"] = " << in[vert]->gl_Position[axis] << std::endl;
+			if (in[vert]->gl_Position[axis] > in[vert]->gl_Position[3])
+			{
+				abc[vert] = 0;
+			}
+			else
+			{
+				abc[vert] = 1;
+			}
 		}
-		else if (in[2]->data[2] < (-in[2]->data[3]))
-		{	
-			alpha = (((-in[2]->data[3]) - in[2]->data[2])/(in[0]->data[2] + in[0]->data[3] - in[2]->data[3] - in[2]->data[2]));
-			bravo = (((-in[2]->data[3]) - in[2]->data[2])/(in[1]->data[2] + in[1]->data[3] - in[2]->data[3] - in[2]->data[2]));
-	
-			geo[0].data[0] = in[0]->data[0] / in[0]->data[3]; 
-			geo[0].data[1] = in[0]->data[1] / in[0]->data[3];
-			geo[0].data[2] =  alpha / in[0]->data[3];
-
-			geo[1].data[0] = in[1]->data[0] / in[1]->data[3];
-			geo[1].data[1] = in[1]->data[1] / in[1]->data[3];
-			geo[1].data[2] = in[1]->data[2] / in[1]->data[3];
-
-			geo[2].data[0] = in[2]->data[0] /in[2]->data[3];
-			geo[2].data[1] = in[2]->data[1] /in[2]->data[3]; 
-			geo[2].data[2] =  bravo / in[2]->data[3];
-			
+	}
+	else
+	{
+		for (int vert = 0; vert < 3; vert++)
+		{
+			//std::cout << " - in["<< vert <<"]->gl_Position["<< axis <<"] = " << in[vert]->gl_Position[axis] << std::endl;
+			if (in[vert]->gl_Position[axis] < -in[vert]->gl_Position[3])
+			{
+				abc[vert] = 0;
+			}
+			else
+			{
+				abc[vert] = 1;
+			}
 		}
+	}
+
+	if( abc[0] == 0 && abc[1] == 0 && abc[2] == 1)
+	{
+		alpha = (((sign * in[0]->gl_Position[3]) - in[0]->gl_Position[axis])/(in[2]->gl_Position[axis] - (sign * in[2]->gl_Position[3]) + (sign * in[0]->gl_Position[3]) - in[0]->gl_Position[axis]));
+		bravo = (((sign * in[1]->gl_Position[3]) - in[1]->gl_Position[axis])/(in[2]->gl_Position[axis] - (sign * in[2]->gl_Position[3]) + (sign * in[1]->gl_Position[3]) - in[1]->gl_Position[axis]));
+		
+		Pa = (alpha * in[2]->gl_Position) + ((1 - alpha) * in[0]->gl_Position);
+		Pb = (bravo * in[2]->gl_Position) + ((1 - bravo) * in[1]->gl_Position);
+		
+		//std::cout << "pa = " << Pa << std::endl;
+		//std::cout << "pb = " << Pb << std::endl;
+		
+		geo[0].gl_Position = Pa;
+		geo[1].gl_Position = Pb;
+		geo[2].gl_Position = in[2]->gl_Position;
 
 		for (int i = 0; i < 3; i++ )
 		{
-			for (int j = 3; j < state.floats_per_vertex; j++)
-			{
-				geo[i].data[j] = in[i]->data[j];
-			}
 			g[i] = &geo[i];
+			
 		}
-
 		
-		rasterize_triangle(state,g);
+		//std::cout << "-X" << std::endl;
+		clip_triangle(state,g,face+1);
 		return;
-		break;
-    }
+	}
+	else if(abc[0] == 0 && abc[1] == 1 && abc[2] == 0)
+	{
+		alpha = (((sign * in[0]->gl_Position[3]) - in[0]->gl_Position[axis])/(in[1]->gl_Position[axis] - (sign * in[1]->gl_Position[3]) + (sign * in[0]->gl_Position[3]) - in[0]->gl_Position[axis]));
+		charlie = (((sign * in[2]->gl_Position[3]) - in[2]->gl_Position[axis])/(in[1]->gl_Position[axis] - (sign * in[1]->gl_Position[3]) + (sign * in[2]->gl_Position[3]) - in[2]->gl_Position[axis]));
+		
+		Pa = (alpha * in[1]->gl_Position) + ((1 - alpha) * in[0]->gl_Position);
+		Pc = (charlie * in[1]->gl_Position) + ((1 - charlie) * in[2]->gl_Position);
+		
 
-    rasterize_triangle(state,g);
-    std::cout<<"TODO: implement clipping. (The current code passes the triangle through without clipping them.)"<<std::endl;
+		//std::cout << "pa = " << Pa << std::endl;
+		//std::cout << "pc = " << Pc << std::endl;
+		
+		geo[0].gl_Position = Pa;
+		geo[1].gl_Position = in[1]->gl_Position;
+		geo[2].gl_Position = Pc;
+
+		for (int i = 0; i < 3; i++ )
+		{
+			g[i] = &geo[i];
+			
+		}
+		
+		//std::cout << "b in" << std::endl;
+		clip_triangle(state,g,face+1);
+		return;
+	}
+	else if (abc[0] == 0 && abc[1] == 1 && abc[2] == 1)
+	{
+		bravo = (((sign * in[0]->gl_Position[3]) - in[0]->gl_Position[axis])/(in[1]->gl_Position[axis] - (sign * in[1]->gl_Position[3]) + (sign * in[0]->gl_Position[3]) - in[0]->gl_Position[axis]));
+		charlie = (((sign * in[2]->gl_Position[3]) - in[2]->gl_Position[axis])/(in[0]->gl_Position[axis] - (sign * in[0]->gl_Position[3]) + (sign * in[2]->gl_Position[3]) - in[2]->gl_Position[axis]));
+		
+		Pb = (bravo * in[1]->gl_Position) + ((1 - bravo) * in[0]->gl_Position);
+		Pc = (charlie * in[0]->gl_Position) + ((1 - charlie) * in[2]->gl_Position);
+		
+		geo[0].gl_Position = Pc;
+		geo[1].gl_Position = in[1]->gl_Position;
+		geo[2].gl_Position = Pb;
+		
+		for (int i = 0; i < 3; i++ )
+		{
+			g[i] = &geo[i];
+			
+		}
+		
+		//std::cout << "b and c in" << std::endl;
+		clip_triangle(state,g,face+1);
+		
+		geo[0].gl_Position = Pc;
+		geo[1].gl_Position = in[1]->gl_Position;
+		geo[2].gl_Position = in[2]->gl_Position;
+		
+		for (int i = 0; i < 3; i++ )
+		{
+			g[i] = &geo[i];
+			
+		}
+		
+		//std::cout << "2 b and c in" << std::endl;
+		clip_triangle(state,g,face+1);
+		
+		return;
+	}
+	else if (abc[0] == 1 && abc[1] == 0 && abc[2] == 0)
+	{
+		bravo = (((sign * in[1]->gl_Position[3]) - in[1]->gl_Position[axis])/(in[0]->gl_Position[axis] - (sign * in[0]->gl_Position[3]) + (sign * in[1]->gl_Position[3]) - in[1]->gl_Position[axis]));
+		charlie = (((sign * in[2]->gl_Position[3]) - in[2]->gl_Position[axis])/(in[0]->gl_Position[axis] - (sign * in[0]->gl_Position[3]) + (sign * in[2]->gl_Position[3]) - in[2]->gl_Position[axis]));
+		
+		Pb = (bravo * in[0]->gl_Position) + ((1 - bravo) * in[1]->gl_Position);
+		Pc = (charlie * in[0]->gl_Position) + ((1 - charlie) * in[2]->gl_Position);
+		
+		geo[0].gl_Position = in[0]->gl_Position;
+		geo[1].gl_Position = Pb;
+		geo[2].gl_Position = Pc;
+		
+		for (int i = 0; i < 3; i++ )
+		{
+			g[i] = &geo[i];
+			
+		}
+		
+		//std::cout << "a in" << std::endl;
+		clip_triangle(state,g,face+1);
+		return;
+	}
+	else if (abc[0] == 1 && abc[1] == 0 && abc[2] == 1)
+	{
+		alpha = (((sign * in[1]->gl_Position[3]) - in[1]->gl_Position[axis])/(in[0]->gl_Position[axis] - (sign * in[0]->gl_Position[3]) + (sign * in[1]->gl_Position[3]) - in[1]->gl_Position[axis]));
+		charlie = (((sign * in[1]->gl_Position[3]) - in[1]->gl_Position[axis])/(in[2]->gl_Position[axis] - (sign * in[2]->gl_Position[3]) + (sign * in[1]->gl_Position[3]) - in[1]->gl_Position[axis]));
+		
+		Pa = (alpha * in[0]->gl_Position) + ((1 - alpha) * in[1]->gl_Position);
+		Pc = (charlie * in[2]->gl_Position) + ((1 - charlie) * in[1]->gl_Position);
+		
+		geo[0].gl_Position = in[0]->gl_Position;
+		geo[1].gl_Position = Pa;
+		geo[2].gl_Position = Pc;
+		
+		for (int i = 0; i < 3; i++ )
+		{
+			g[i] = &geo[i];
+			
+		}
+		
+		//std::cout << "a and c in" << std::endl;
+		clip_triangle(state,g,face+1);
+		
+		geo[0].gl_Position = in[0]->gl_Position;
+		geo[1].gl_Position = Pc;
+		geo[2].gl_Position = in[2]->gl_Position;
+		
+		for (int i = 0; i < 3; i++ )
+		{
+			g[i] = &geo[i];
+			
+		}
+		
+		//std::cout << "2 a and c in" << std::endl;
+		clip_triangle(state,g,face+1);
+		return;
+	}
+	else if (abc[0] == 1 && abc[1] == 1 && abc[2] == 0)
+	{
+		alpha = (((sign * in[2]->gl_Position[3]) - in[2]->gl_Position[axis])/(in[0]->gl_Position[axis] - (sign * in[0]->gl_Position[3]) + (sign * in[2]->gl_Position[3]) - in[2]->gl_Position[axis]));
+		bravo = (((sign * in[1]->gl_Position[3]) - in[1]->gl_Position[axis])/(in[2]->gl_Position[axis] - (sign * in[2]->gl_Position[3]) + (sign * in[1]->gl_Position[3]) - in[1]->gl_Position[axis]));
+		
+		Pa = (alpha * in[0]->gl_Position) + ((1 - alpha) * in[2]->gl_Position);
+		Pb = (bravo * in[2]->gl_Position) + ((1 - bravo) * in[1]->gl_Position);
+		
+		geo[0].gl_Position = in[0]->gl_Position;
+		geo[1].gl_Position = Pa;
+		geo[2].gl_Position = Pb;
+		
+		for (int i = 0; i < 3; i++ )
+		{
+			g[i] = &geo[i];
+			
+		}
+		
+		//std::cout << "a and b in" << std::endl;
+		clip_triangle(state,g,face+1);
+		
+		geo[0].gl_Position = in[0]->gl_Position;
+		geo[1].gl_Position = in[1]->gl_Position;
+		geo[2].gl_Position = Pb;
+		
+		for (int i = 0; i < 3; i++ )
+		{
+			g[i] = &geo[i];
+			
+		}
+		
+		//std::cout << "2 a and b in" << std::endl;
+		clip_triangle(state,g,face+1);
+		return;
+	}
+    //std::cout<<"TODO: implement clipping. (The current code passes the triangle through without clipping them.)"<<std::endl;
     clip_triangle(state,in,face+1);
 }
 
@@ -539,7 +430,14 @@ void clip_triangle(driver_state& state, const data_geometry* in[3],int face)
 void rasterize_triangle(driver_state& state, const data_geometry* in[3])
 {
 //    std::cout<<"TODO: implement rasterization"<<std::endl;
-
+/*for(int i = 0; i < 3;i++)
+{
+	for(int j=0; j < 3;j++)
+	{
+		std::cout<<"in["<< i <<"]->gl_Position["<< j <<"] = "<< in[i]->gl_Position[j] <<std::endl;
+	}
+}*/
+	
    float ai = (((state.image_width/2) * in[0]->gl_Position[0]) + ((state.image_width/2) - 0.5));
    float aj = (((state.image_height/2) * in[0]->gl_Position[1]) + ((state.image_height/2) - 0.5));
 
@@ -557,11 +455,16 @@ void rasterize_triangle(driver_state& state, const data_geometry* in[3])
     int xmax = std::max(std::max(ai,bi),ci);
     int ymin = std::min(std::min(aj,bj),cj);
     int ymax = std::max(std::max(aj,bj),cj);
+	
+	//std::cout<<"xmin = "<< xmin <<std::endl;
+	//std::cout<<"xmax = "<< xmax <<std::endl;
+	//std::cout<<"ymin = "<< ymin <<std::endl;
+	//std::cout<<"ymax = "<< ymax <<std::endl;
     for (int i = xmin; i < xmax; i++)
     {
 
     	for (int j = ymin; j < ymax ; j++)
-	{
+		{
     		float alpha = 0.5 * (((bi * cj) - (ci * bj)) - 
 			((i * cj) - (ci * j)) +  
 			((i * bj) - (bi * j))); 
@@ -572,56 +475,58 @@ void rasterize_triangle(driver_state& state, const data_geometry* in[3])
 			((ai * j) - (i * aj)) +  
 			((ai * bj) - (bi * aj))); 
 
+			//std::cout<<"alpha + bravo + gamma = "<< alpha + bravo + gamma <<std::endl;
 
-		alpha /= area;
-		bravo /= area;
-		gamma /= area;
-		
-		if (alpha >= 0 && bravo >= 0 && gamma >= 0 && gamma >= 0 && alpha + bravo + gamma <= 1.01)
-		{
-			int index = (state.image_width  * j) + i;
+			alpha /= area;
+			bravo /= area;
+			gamma /= area;
+			//std::cout<<"alpha + bravo + gamma = "<< alpha + bravo + gamma <<std::endl;
 			
-	
-			data_fragment fragment;
-			fragment.data = new float[MAX_FLOATS_PER_VERTEX];
-			data_output output;
-			
-			for (int i = 0; i < state.floats_per_vertex; i++)
+			if (alpha >= 0 && bravo >= 0 && gamma >= 0 && gamma >= 0 && alpha + bravo + gamma <= 1.0001 )
 			{
-				switch(state.interp_rules[i])
+				int index = (state.image_width  * j) + i;
+				
+		
+				data_fragment fragment;
+				fragment.data = new float[MAX_FLOATS_PER_VERTEX];
+				data_output output;
+				
+				for (int i = 0; i < state.floats_per_vertex; i++)
 				{
-					case interp_type::flat:
-						fragment.data[i] = in[0]->data[i];
-						break;
-					case interp_type::smooth:
-						float Aprime,Bprime,Cprime, alpha2,bravo2,gamma2;
-						Aprime = ((alpha * in[0]->data[i])/((alpha * in[0]->data[i])+(bravo * in[1]->data[i])+(gamma * in[2]->data[i]) ));
-						Bprime = ((bravo * in[1]->data[i])/((alpha * in[0]->data[i])+(bravo * in[1]->data[i])+(gamma * in[2]->data[i]) ));
-						Cprime = ((gamma * in[2]->data[i])/((alpha * in[0]->data[i])+(bravo * in[1]->data[i])+(gamma * in[2]->data[i]) ));
-						
-						alpha2 = ((Aprime * in[0]->data[i])/((Aprime * in[0]->data[i])+(Bprime * in[1]->data[i])+(Cprime * in[2]->data[i]) )); 
-						bravo2 = ((Bprime * in[1]->data[i])/((Aprime * in[0]->data[i])+(Bprime * in[1]->data[i])+(Cprime * in[2]->data[i]) )); 
-						gamma2 = ((Cprime * in[2]->data[i])/((Aprime * in[0]->data[i])+(Bprime * in[1]->data[i])+(Cprime * in[2]->data[i]) )); 
+					switch(state.interp_rules[i])
+					{
+						case interp_type::flat:
+							fragment.data[i] = in[0]->data[i];
+							break;
+						case interp_type::smooth:
+							float Aprime,Bprime,Cprime, alpha2,bravo2,gamma2;
+							Aprime = ((alpha * in[0]->data[i])/((alpha * in[0]->data[i])+(bravo * in[1]->data[i])+(gamma * in[2]->data[i]) ));
+							Bprime = ((bravo * in[1]->data[i])/((alpha * in[0]->data[i])+(bravo * in[1]->data[i])+(gamma * in[2]->data[i]) ));
+							Cprime = ((gamma * in[2]->data[i])/((alpha * in[0]->data[i])+(bravo * in[1]->data[i])+(gamma * in[2]->data[i]) ));
+							
+							alpha2 = ((Aprime * in[0]->data[i])/((Aprime * in[0]->data[i])+(Bprime * in[1]->data[i])+(Cprime * in[2]->data[i]) )); 
+							bravo2 = ((Bprime * in[1]->data[i])/((Aprime * in[0]->data[i])+(Bprime * in[1]->data[i])+(Cprime * in[2]->data[i]) )); 
+							gamma2 = ((Cprime * in[2]->data[i])/((Aprime * in[0]->data[i])+(Bprime * in[1]->data[i])+(Cprime * in[2]->data[i]) )); 
 
-						fragment.data[i] = ((alpha2 * in[0]->data[i]) + (bravo2 * in[1]->data[i]) + (gamma2 * in[2]->data[i]));
+							fragment.data[i] = ((alpha2 * in[0]->data[i]) + (bravo2 * in[1]->data[i]) + (gamma2 * in[2]->data[i]));
 
-						break;
-					case interp_type::noperspective:
-						fragment.data[i] = ((alpha * in[0]->data[i]) + (bravo * in[1]->data[i]) + (gamma * in[2]->data[i]));
-						break;	
+							break;
+						case interp_type::noperspective:
+							fragment.data[i] = ((alpha * in[0]->data[i]) + (bravo * in[1]->data[i]) + (gamma * in[2]->data[i]));
+							break;	
+					}
+				}
+				state.fragment_shader(fragment,output,state.uniform_data);
+				
+				float depth = ((in[0]->gl_Position[2] / in[0]->gl_Position[3]) * alpha) +  ((in[1]->gl_Position[2] / in[1]->gl_Position[3]) * bravo) +  ((in[2]->gl_Position[2] / in[2]->gl_Position[3]) * gamma);  
+				
+				if (depth < state.image_depth[index])
+				{
+					state.image_depth[index] = depth; 			
+					state.image_color[index] = make_pixel((255 * output.output_color[0]),(255 * output.output_color[1]),(255 * output.output_color[2]));
 				}
 			}
-			state.fragment_shader(fragment,output,state.uniform_data);
-			
-			float depth = ((in[0]->gl_Position[2] / in[0]->gl_Position[3]) * alpha) +  ((in[1]->gl_Position[2] / in[1]->gl_Position[3]) * bravo) +  ((in[2]->gl_Position[2] / in[2]->gl_Position[3]) * gamma);  
-
-			if (depth < state.image_depth[index])
-			{
-				state.image_depth[index] = depth; 			
-				state.image_color[index] = make_pixel((255 * output.output_color[0]),(255 * output.output_color[1]),(255 * output.output_color[2]));
-			}
 		}
-	}
     }
 }
 
