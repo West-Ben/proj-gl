@@ -32,7 +32,7 @@ void initialize_render(driver_state& state, int width, int height)
 
     for (int i = 0; i < width * height; i++)
     {
-	    state.image_depth[i] = 100.0;
+	    state.image_depth[i] = 10.0;
     }
 
     //std::cout<<"TODO: allocate and initialize state.image_color and state.image_depth."<<std::endl;
@@ -74,26 +74,20 @@ void render(driver_state& state, render_type type)
 
 			for (size_t i = 0; i < 3 ; i++)
 			{
-				//std::cout << "i = " << i << std::endl;
 
 				for (size_t j = 0; j < state.floats_per_vertex; j++)
 				{
-				//	std::cout << "index = " << ((state.floats_per_vertex * 3) * k) + (state.floats_per_vertex * i) + j << std::endl;
 					ver_data.data[j] = state.vertex_data[((state.floats_per_vertex * 3) * k) + (state.floats_per_vertex * i) + j];
 				}
 				geo[i].data = new float[MAX_FLOATS_PER_VERTEX];
 				state.vertex_shader(ver_data,geo[i],state.uniform_data);
-				//geo[i].gl_Position /= geo[i].gl_Position[3];
+
 				
 				
 				g[i] = &geo[i];
 			}
 			
-			//std::cout<<"geo[0]->gl_Position[3] = " << geo[0].gl_Position[3]<<std::endl;
-			//std::cout<<"geo[1]->gl_Position[3] = " << geo[1].gl_Position[3]<<std::endl;
-			//std::cout<<"geo[2]->gl_Position[3] = " << geo[2].gl_Position[3]<<std::endl;
 			clip_triangle(state,g,0);
-			//delete geo;
 		}
 		break;	
     	}
@@ -112,10 +106,9 @@ void render(driver_state& state, render_type type)
 				{
 					for(int j = 0; j < state.floats_per_vertex; j++)
 					{
-						ver_data.data[j] = state.vertex_data[state.index_data[(k * 3) + i] + j];
+						ver_data.data[j] = state.vertex_data[(state.index_data[(k * 3) + i] * 3) + j];
 					}
 
-					
 					geo[i].data = new float[MAX_FLOATS_PER_VERTEX];
 					state.vertex_shader(ver_data,geo[i],state.uniform_data);
 					
@@ -128,11 +121,78 @@ void render(driver_state& state, render_type type)
     	}
 	case render_type::fan:
 		{
+		/*int	counter = 1;
+		for (int i = 0; i < 36 ; i++)
+		{
+			std::cout << "float [" << i << "] = " << state.vertex_data[i] << std::endl;
+			if (counter++ % 3 == 0) std::cout << std::endl;
+		}*/
+		for (int k = 0 ; k <  (state.num_vertices - 2); k++)
+		{
+			data_vertex ver_data;
+	        	ver_data.data = new float[MAX_FLOATS_PER_VERTEX];
+			const data_geometry *g[3];
+			data_geometry geo[3];
+			
+			for (size_t j = 0; j < state.floats_per_vertex; j++)
+			{
+				ver_data.data[j] = state.vertex_data[j];
+			}
+			geo[0].data = new float[MAX_FLOATS_PER_VERTEX];
+			state.vertex_shader(ver_data, geo[0], state.uniform_data);
+			g[0] = &geo[0];
+
+			for (size_t i = 1; i < 3 ; i++)
+			{
+
+				for (size_t j = 0; j < state.floats_per_vertex; j++)
+				{
+					ver_data.data[j] = state.vertex_data[((state.floats_per_vertex) * k) + (state.floats_per_vertex * i) + j];
+				}
+				geo[i].data = new float[MAX_FLOATS_PER_VERTEX];
+				state.vertex_shader(ver_data, geo[i], state.uniform_data);
+
+				
+				
+				g[i] = &geo[i];
+			}
+			
+			clip_triangle(state,g,0);
+		}
 		//std::cout << "fan count = " << count << std::endl;
 		break;
     		}	
 	case render_type::strip:
 		{
+		for (int i = 0; i < 36 ; i++)
+		/*{
+			std::cout << "float [" << i << "] = " << state.vertex_data[i] << std::endl;
+			if (counter++ % 3 == 0) std::cout << std::endl;
+		}*/
+		for (int k = 0 ; k <  (state.num_vertices - 2); k++)
+		{
+			data_vertex ver_data;
+	        	ver_data.data = new float[MAX_FLOATS_PER_VERTEX];
+			const data_geometry *g[3];
+			data_geometry geo[3];
+
+			for (size_t i = 0; i < 3 ; i++)
+			{
+
+				for (size_t j = 0; j < state.floats_per_vertex; j++)
+				{
+					ver_data.data[j] = state.vertex_data[((state.floats_per_vertex) * k) + (state.floats_per_vertex * i) + j];
+				}
+				geo[i].data = new float[MAX_FLOATS_PER_VERTEX];
+				state.vertex_shader(ver_data, geo[i], state.uniform_data);
+
+				
+				
+				g[i] = &geo[i];
+			}
+			
+			clip_triangle(state,g,0);
+		}
 		//std::cout << "strip count = " << count << std::endl;
 		break;
     			
@@ -155,8 +215,14 @@ void clip_triangle(driver_state& state, const data_geometry* in[3],int face)
     {
 		for (int i = 0; i < 3; i++)
 		{
+			//std::cout<<"1in[" << i << "]->gl_Position[3] = " << in[i]->gl_Position[3]<<std::endl;
 			geo[i].data = in[i]->data;
-			geo[i].gl_Position = (in[i]->gl_Position / in[i]->gl_Position[3]);
+			geo[i].gl_Position[0] = (in[i]->gl_Position[0] / in[i]->gl_Position[3]);
+			geo[i].gl_Position[1] = (in[i]->gl_Position[1] / in[i]->gl_Position[3]);
+			geo[i].gl_Position[2] = (in[i]->gl_Position[2] / in[i]->gl_Position[3]);
+			geo[i].gl_Position[3] = in[i]->gl_Position[3];
+			
+			//std::cout<<"2in[" << i << "]->gl_Position[3] = " << in[i]->gl_Position[3]<<std::endl;
 			
 			g[i] = &geo[i];
 		}
@@ -174,9 +240,11 @@ void clip_triangle(driver_state& state, const data_geometry* in[3],int face)
     int axis;
 	int sign;
 	
+
+	
 	for (int i = 0; i < 3; i++ )
 	{
-		geo[i].data = in[i]->data;
+		geo[i].data = new float[MAX_FLOATS_PER_VERTEX];
 	}
 
 
@@ -241,20 +309,52 @@ void clip_triangle(driver_state& state, const data_geometry* in[3],int face)
 		}
 	}
 
-	if( abc[0] == 0 && abc[1] == 0 && abc[2] == 1)
+
+	if (abc[0] == 0 && abc[1] == 0 && abc[2] == 0)
 	{
-		alpha = (((sign * in[0]->gl_Position[3]) - in[0]->gl_Position[axis])/(in[2]->gl_Position[axis] - (sign * in[2]->gl_Position[3]) + (sign * in[0]->gl_Position[3]) - in[0]->gl_Position[axis]));
+		return;
+	}
+	//else if (abc[0] == 1 && abc[1] == 1 && abc[2] == 1)
+	//{
+	//	clip_triangle(state,in,face + 1);
+	//}
+	
+	else if (abc[0] == 0 && abc[1] == 0 && abc[2] == 1)
+	{
+		alpha = (((sign * in[2]->gl_Position[3]) - in[2]->gl_Position[axis])/(in[0]->gl_Position[axis] - (sign * in[0]->gl_Position[3]) + (sign * in[2]->gl_Position[3]) - in[2]->gl_Position[axis]));
 		bravo = (((sign * in[1]->gl_Position[3]) - in[1]->gl_Position[axis])/(in[2]->gl_Position[axis] - (sign * in[2]->gl_Position[3]) + (sign * in[1]->gl_Position[3]) - in[1]->gl_Position[axis]));
 		
-		Pa = (alpha * in[2]->gl_Position) + ((1 - alpha) * in[0]->gl_Position);
+		Pa = (alpha * in[0]->gl_Position) + ((1 - alpha) * in[2]->gl_Position);
 		Pb = (bravo * in[2]->gl_Position) + ((1 - bravo) * in[1]->gl_Position);
 		
-		//std::cout << "pa = " << Pa << std::endl;
-		//std::cout << "pb = " << Pb << std::endl;
+		//std::cout << "001 = " << std::endl;
 		
-		geo[0].gl_Position = Pa;
-		geo[1].gl_Position = Pb;
-		geo[2].gl_Position = in[2]->gl_Position;
+		geo[0].gl_Position = in[2]->gl_Position;
+		geo[1].gl_Position = Pa;
+		geo[2].gl_Position = Pb;
+
+		for (int i = 0; i < state.floats_per_vertex; i++)
+		{
+			
+			switch(state.interp_rules[i])
+			{
+				case interp_type::smooth:
+					
+					geo[0].data[i] = in[2]->data[i];
+					geo[1].data[i] = (alpha * in[0]->data[i]) + ((1 - alpha) * in[1]->data[i]);
+					geo[2].data[i] = (bravo * in[2]->data[i]) + ((1 - bravo) * in[1]->data[i]);
+					
+					break;
+				case interp_type::noperspective:
+					float ac_k = alpha *  in[0]->gl_Position[3] / (alpha * in[0]->gl_Position[3] + (1 - alpha) * in[2]->gl_Position[3]);
+					float cb_k = bravo *  in[2]->gl_Position[3] / (bravo * in[2]->gl_Position[3] + (1 - bravo) * in[1]->gl_Position[3]);
+				
+					geo[0].data[i] = in[0]->data[i];
+					geo[1].data[i] = (ac_k * in[0]->data[i]) + ((1 - ac_k) * in[2]->data[i]);
+					geo[2].data[i] = (cb_k * in[2]->data[i]) + ((1 - cb_k) * in[1]->data[i]);
+					break;	
+			}
+		}
 
 		for (int i = 0; i < 3; i++ )
 		{
@@ -268,19 +368,41 @@ void clip_triangle(driver_state& state, const data_geometry* in[3],int face)
 	}
 	else if(abc[0] == 0 && abc[1] == 1 && abc[2] == 0)
 	{
-		alpha = (((sign * in[0]->gl_Position[3]) - in[0]->gl_Position[axis])/(in[1]->gl_Position[axis] - (sign * in[1]->gl_Position[3]) + (sign * in[0]->gl_Position[3]) - in[0]->gl_Position[axis]));
+		alpha = (((sign * in[1]->gl_Position[3]) - in[1]->gl_Position[axis])/(in[0]->gl_Position[axis] - (sign * in[0]->gl_Position[3]) + (sign * in[1]->gl_Position[3]) - in[1]->gl_Position[axis]));
 		charlie = (((sign * in[2]->gl_Position[3]) - in[2]->gl_Position[axis])/(in[1]->gl_Position[axis] - (sign * in[1]->gl_Position[3]) + (sign * in[2]->gl_Position[3]) - in[2]->gl_Position[axis]));
 		
-		Pa = (alpha * in[1]->gl_Position) + ((1 - alpha) * in[0]->gl_Position);
+		Pa = (alpha * in[0]->gl_Position) + ((1 - alpha) * in[1]->gl_Position);
 		Pc = (charlie * in[1]->gl_Position) + ((1 - charlie) * in[2]->gl_Position);
 		
-
-		//std::cout << "pa = " << Pa << std::endl;
-		//std::cout << "pc = " << Pc << std::endl;
+		//std::cout << "010 = " << std::endl;
 		
-		geo[0].gl_Position = Pa;
-		geo[1].gl_Position = in[1]->gl_Position;
-		geo[2].gl_Position = Pc;
+		geo[0].gl_Position = in[1]->gl_Position;
+		geo[1].gl_Position = Pc;
+		geo[2].gl_Position = Pa;
+
+		for (int i = 0; i < state.floats_per_vertex; i++)
+		{
+			
+			switch(state.interp_rules[i])
+			{
+				case interp_type::smooth:
+					
+					geo[0].data[i] = in[1]->data[i];
+					geo[1].data[i] = (charlie * in[1]->data[i]) + ((1 - charlie) * in[2]->data[i]);
+					geo[2].data[i] = (alpha * in[0]->data[i]) + ((1 - alpha) * in[1]->data[i]);
+					
+					break;
+				case interp_type::noperspective:
+					float ab_np = (alpha *  in[0]->gl_Position[3]) / (alpha * in[0]->gl_Position[3] + (1 - alpha) * in[1]->gl_Position[3]);
+					float bc_np = (charlie *  in[2]->gl_Position[3]) / (charlie * in[2]->gl_Position[3] + (1 - charlie) * in[1]->gl_Position[3]);
+				
+					//std::cout << "np1" << std::endl;
+					geo[0].data[i] = in[0]->data[i];
+					geo[1].data[i] = (bc_np * in[1]->data[i]) + ((1 - bc_np) * in[2]->data[i]);
+					geo[2].data[i] = (ab_np * in[0]->data[i]) + ((1 - ab_np) * in[1]->data[i]);
+					break;	
+			}
+		}
 
 		for (int i = 0; i < 3; i++ )
 		{
@@ -294,15 +416,42 @@ void clip_triangle(driver_state& state, const data_geometry* in[3],int face)
 	}
 	else if (abc[0] == 0 && abc[1] == 1 && abc[2] == 1)
 	{
-		bravo = (((sign * in[0]->gl_Position[3]) - in[0]->gl_Position[axis])/(in[1]->gl_Position[axis] - (sign * in[1]->gl_Position[3]) + (sign * in[0]->gl_Position[3]) - in[0]->gl_Position[axis]));
-		charlie = (((sign * in[2]->gl_Position[3]) - in[2]->gl_Position[axis])/(in[0]->gl_Position[axis] - (sign * in[0]->gl_Position[3]) + (sign * in[2]->gl_Position[3]) - in[2]->gl_Position[axis]));
+		bravo = (((sign * in[1]->gl_Position[3]) - in[1]->gl_Position[axis])/(in[0]->gl_Position[axis] - (sign * in[0]->gl_Position[3]) + (sign * in[1]->gl_Position[3]) - in[1]->gl_Position[axis]));
+		charlie = (((sign * in[0]->gl_Position[3]) - in[0]->gl_Position[axis])/(in[2]->gl_Position[axis] - (sign * in[2]->gl_Position[3]) + (sign * in[0]->gl_Position[3]) - in[0]->gl_Position[axis]));
 		
-		Pb = (bravo * in[1]->gl_Position) + ((1 - bravo) * in[0]->gl_Position);
-		Pc = (charlie * in[0]->gl_Position) + ((1 - charlie) * in[2]->gl_Position);
+		Pb = (bravo * in[0]->gl_Position) + ((1 - bravo) * in[1]->gl_Position);
+		Pc = (charlie * in[2]->gl_Position) + ((1 - charlie) * in[0]->gl_Position);
 		
-		geo[0].gl_Position = Pc;
-		geo[1].gl_Position = in[1]->gl_Position;
+		//std::cout << "011" << std::endl;
+	
+		for (int i = 0; i < state.floats_per_vertex; i++)
+		{
+			
+			switch(state.interp_rules[i])
+			{
+				case interp_type::smooth:
+					
+					geo[0].data[i] = in[1]->data[i];
+					geo[1].data[i] = (charlie * in[2]->data[i]) + ((1 - charlie) * in[0]->data[i]);
+					geo[2].data[i] = (bravo * in[0]->data[i]) + ((1 - bravo) * in[1]->data[i]);
+					
+					break;
+				case interp_type::noperspective:
+					float ba_np = (bravo *  in[0]->gl_Position[3]) / (bravo * in[0]->gl_Position[3] + (1 - bravo) * in[1]->gl_Position[3]);
+					float ca_np = (charlie *  in[2]->gl_Position[3]) / (charlie * in[2]->gl_Position[3] + (1 - charlie) * in[0]->gl_Position[3]);
+				
+					//std::cout << "np1" << std::endl;
+					geo[0].data[i] = in[1]->data[i];
+					geo[1].data[i] = (ca_np * in[2]->data[i]) + ((1 - ca_np) * in[0]->data[i]);
+					geo[2].data[i] = (ba_np * in[0]->data[i]) + ((1 - ba_np) * in[1]->data[i]);
+					break;	
+			}
+		}
+		
+		geo[0].gl_Position = in[1]->gl_Position;
+		geo[1].gl_Position = Pc;
 		geo[2].gl_Position = Pb;
+
 		
 		for (int i = 0; i < 3; i++ )
 		{
@@ -313,9 +462,37 @@ void clip_triangle(driver_state& state, const data_geometry* in[3],int face)
 		//std::cout << "b and c in" << std::endl;
 		clip_triangle(state,g,face+1);
 		
-		geo[0].gl_Position = Pc;
-		geo[1].gl_Position = in[1]->gl_Position;
-		geo[2].gl_Position = in[2]->gl_Position;
+		geo[0].gl_Position = in[1]->gl_Position;
+		geo[1].gl_Position = in[2]->gl_Position;
+		geo[2].gl_Position = Pc;
+		
+		
+		for (int i = 0; i < state.floats_per_vertex; i++)
+		{
+			float datab = (bravo * in[1]->data[i]) + ((1 - bravo) * in[0]->data[i]);
+			float datac = (charlie * in[0]->data[i]) + ((1 - charlie) * in[2]->data[i]);
+			
+			float npalpha = (bravo * in[0]->gl_Position[3]) / ((bravo * in[0]->gl_Position[3]) + ((1 - bravo) * in[1]->gl_Position[3]));
+			float npbravo = (charlie * in[0]->gl_Position[3]) / ((charlie * in[0]->gl_Position[3]) + ((1 - charlie) * in[2]->gl_Position[3]));
+			
+			switch(state.interp_rules[i])
+			{
+				case interp_type::smooth:
+					
+					geo[0].data[i] = in[1]->data[i];
+					geo[1].data[i] = in[2]->data[i];
+					geo[2].data[i] = (charlie * in[2]->data[i]) + ((1 - charlie) * in[0]->data[i]);
+					
+					break;
+				case interp_type::noperspective:
+					float ca_np = (charlie *  in[2]->gl_Position[3]) / (charlie * in[2]->gl_Position[3] + (1 - charlie) * in[0]->gl_Position[3]);
+					//std::cout << "np1" << std::endl;
+					geo[0].data[i] = in[1]->data[i];
+					geo[1].data[i] = in[2]->data[i];
+					geo[2].data[i] = (ca_np * in[2]->data[i]) + ((1 - ca_np) * in[0]->data[i]);
+					break;	
+			}
+		}
 		
 		for (int i = 0; i < 3; i++ )
 		{
@@ -330,15 +507,43 @@ void clip_triangle(driver_state& state, const data_geometry* in[3],int face)
 	}
 	else if (abc[0] == 1 && abc[1] == 0 && abc[2] == 0)
 	{
-		bravo = (((sign * in[1]->gl_Position[3]) - in[1]->gl_Position[axis])/(in[0]->gl_Position[axis] - (sign * in[0]->gl_Position[3]) + (sign * in[1]->gl_Position[3]) - in[1]->gl_Position[axis]));
+		bravo = (((sign * in[0]->gl_Position[3]) - in[0]->gl_Position[axis])/(in[1]->gl_Position[axis] - (sign * in[1]->gl_Position[3]) + (sign * in[0]->gl_Position[3]) - in[0]->gl_Position[axis]));
 		charlie = (((sign * in[2]->gl_Position[3]) - in[2]->gl_Position[axis])/(in[0]->gl_Position[axis] - (sign * in[0]->gl_Position[3]) + (sign * in[2]->gl_Position[3]) - in[2]->gl_Position[axis]));
 		
-		Pb = (bravo * in[0]->gl_Position) + ((1 - bravo) * in[1]->gl_Position);
+		Pb = (bravo * in[1]->gl_Position) + ((1 - bravo) * in[0]->gl_Position);
 		Pc = (charlie * in[0]->gl_Position) + ((1 - charlie) * in[2]->gl_Position);
+		
+		//std::cout << "100 = " << std::endl;
 		
 		geo[0].gl_Position = in[0]->gl_Position;
 		geo[1].gl_Position = Pb;
 		geo[2].gl_Position = Pc;
+		
+			
+		for (int i = 0; i < state.floats_per_vertex; i++)
+		{
+			switch(state.interp_rules[i])
+			{
+				case interp_type::smooth:
+					
+					geo[0].data[i] = in[0]->data[i];
+					geo[1].data[i] = (bravo * in[1]->data[i]) + ((1 - bravo) * in[0]->data[i]);
+					geo[2].data[i] = (charlie * in[0]->data[i]) + ((1 - charlie) * in[2]->data[i]);
+					
+					
+					break;
+				case interp_type::noperspective:
+					float ba_np = bravo *  in[1]->gl_Position[3] / (bravo * in[1]->gl_Position[3] + (1 - bravo) * in[0]->gl_Position[3]);
+					float ac_np = charlie *  in[0]->gl_Position[3] / (charlie * in[0]->gl_Position[3] + (1 - charlie) * in[2]->gl_Position[3]);
+				
+				
+					geo[0].data[i] = in[0]->data[i];
+					geo[1].data[i] = (ba_np * in[1]->data[i]) + ((1 - ba_np) * in[0]->data[i]);
+					geo[2].data[i] = (ac_np * in[0]->data[i]) + ((1 - ac_np) * in[2]->data[i]);
+					break;	
+			}
+		}
+		
 		
 		for (int i = 0; i < 3; i++ )
 		{
@@ -353,14 +558,40 @@ void clip_triangle(driver_state& state, const data_geometry* in[3],int face)
 	else if (abc[0] == 1 && abc[1] == 0 && abc[2] == 1)
 	{
 		alpha = (((sign * in[1]->gl_Position[3]) - in[1]->gl_Position[axis])/(in[0]->gl_Position[axis] - (sign * in[0]->gl_Position[3]) + (sign * in[1]->gl_Position[3]) - in[1]->gl_Position[axis]));
-		charlie = (((sign * in[1]->gl_Position[3]) - in[1]->gl_Position[axis])/(in[2]->gl_Position[axis] - (sign * in[2]->gl_Position[3]) + (sign * in[1]->gl_Position[3]) - in[1]->gl_Position[axis]));
+		charlie = (((sign * in[2]->gl_Position[3]) - in[2]->gl_Position[axis])/(in[1]->gl_Position[axis] - (sign * in[1]->gl_Position[3]) + (sign * in[2]->gl_Position[3]) - in[2]->gl_Position[axis]));
 		
 		Pa = (alpha * in[0]->gl_Position) + ((1 - alpha) * in[1]->gl_Position);
-		Pc = (charlie * in[2]->gl_Position) + ((1 - charlie) * in[1]->gl_Position);
+		Pc = (charlie * in[1]->gl_Position) + ((1 - charlie) * in[2]->gl_Position);
 		
-		geo[0].gl_Position = in[0]->gl_Position;
+		//std::cout << "101" << std::endl;
+		
+		geo[0].gl_Position = in[2]->gl_Position;
 		geo[1].gl_Position = Pa;
 		geo[2].gl_Position = Pc;
+		
+		for (int i = 0; i < state.floats_per_vertex; i++)
+		{
+			
+			switch(state.interp_rules[i])
+			{
+				case interp_type::smooth:
+					
+					geo[0].data[i] = in[2]->data[i];
+					geo[1].data[i] = (alpha * in[0]->data[i]) + ((1 - alpha) * in[1]->data[i]);
+					geo[2].data[i] = (charlie * in[1]->data[i]) + ((1 - charlie) * in[2]->data[i]);
+					
+					break;
+				case interp_type::noperspective:
+					float ab_np = alpha *  in[0]->gl_Position[3] / (alpha * in[0]->gl_Position[3] + (1 - alpha) * in[1]->gl_Position[3]);
+					float cb_np = charlie *  in[1]->gl_Position[3] / (charlie * in[1]->gl_Position[3] + (1 - charlie) * in[2]->gl_Position[3]);
+				
+				
+					geo[0].data[i] = in[2]->data[i];
+					geo[1].data[i] = (ab_np * in[0]->data[i]) + ((1 - ab_np) * in[1]->data[i]);
+					geo[2].data[i] = (cb_np * in[1]->data[i]) + ((1 - cb_np) * in[2]->data[i]);
+					break;	
+			}
+		}
 		
 		for (int i = 0; i < 3; i++ )
 		{
@@ -371,9 +602,34 @@ void clip_triangle(driver_state& state, const data_geometry* in[3],int face)
 		//std::cout << "a and c in" << std::endl;
 		clip_triangle(state,g,face+1);
 		
-		geo[0].gl_Position = in[0]->gl_Position;
-		geo[1].gl_Position = Pc;
-		geo[2].gl_Position = in[2]->gl_Position;
+		geo[0].gl_Position = in[2]->gl_Position;
+		geo[1].gl_Position = in[0]->gl_Position;
+		geo[2].gl_Position = Pa;
+		
+		for (int i = 0; i < state.floats_per_vertex; i++)
+		{
+			
+			switch(state.interp_rules[i])
+			{
+				case interp_type::smooth:
+					
+					geo[0].data[i] = in[2]->data[i];
+					geo[1].data[i] = in[0]->data[i];
+					geo[2].data[i] = (alpha * in[0]->data[i]) + ((1 - alpha) * in[1]->data[i]);
+					
+					break;
+				case interp_type::noperspective:
+					float ab_np = alpha *  in[0]->gl_Position[3] / (alpha * in[0]->gl_Position[3] + (1 - alpha) * in[1]->gl_Position[3]);
+					float cb_k = charlie *  in[1]->gl_Position[3] / (charlie * in[2]->gl_Position[3] + (1 - charlie) * in[2]->gl_Position[3]);
+				
+				
+					geo[0].data[i] = in[2]->data[i];
+					geo[1].data[i] = in[0]->data[i];
+					geo[2].data[i] = (ab_np * in[0]->data[i]) + ((1 - ab_np) * in[1]->data[i]);
+					break;	
+			}
+		}
+		
 		
 		for (int i = 0; i < 3; i++ )
 		{
@@ -387,16 +643,43 @@ void clip_triangle(driver_state& state, const data_geometry* in[3],int face)
 	}
 	else if (abc[0] == 1 && abc[1] == 1 && abc[2] == 0)
 	{
-		alpha = (((sign * in[2]->gl_Position[3]) - in[2]->gl_Position[axis])/(in[0]->gl_Position[axis] - (sign * in[0]->gl_Position[3]) + (sign * in[2]->gl_Position[3]) - in[2]->gl_Position[axis]));
+		alpha = (((sign * in[2]->gl_Position[3]) - in[2]->gl_Position[axis])/(in[0]->gl_Position[axis] - (sign * in[0]->gl_Position[3]) + (sign * in[0]->gl_Position[3]) - in[2]->gl_Position[axis]));
 		bravo = (((sign * in[1]->gl_Position[3]) - in[1]->gl_Position[axis])/(in[2]->gl_Position[axis] - (sign * in[2]->gl_Position[3]) + (sign * in[1]->gl_Position[3]) - in[1]->gl_Position[axis]));
 		
 		Pa = (alpha * in[0]->gl_Position) + ((1 - alpha) * in[2]->gl_Position);
 		Pb = (bravo * in[2]->gl_Position) + ((1 - bravo) * in[1]->gl_Position);
 		
-		geo[0].gl_Position = in[0]->gl_Position;
-		geo[1].gl_Position = Pa;
-		geo[2].gl_Position = Pb;
+		//std::cout << "110" << std::endl;
 		
+		geo[0].gl_Position = in[0]->gl_Position;
+		geo[1].gl_Position = Pb;
+		geo[2].gl_Position = Pa;
+		
+		for (int i = 0; i < state.floats_per_vertex; i++)
+		{
+				
+			switch(state.interp_rules[i])
+			{
+				case interp_type::smooth:
+					
+					geo[0].data[i] = in[0]->data[i];
+					geo[1].data[i] = (bravo * in[2]->data[i]) + ((1 - bravo) * in[1]->data[i]);
+					geo[2].data[i] = (alpha * in[0]->data[i]) + ((1 - alpha) * in[2]->data[i]);
+					
+					break;
+				case interp_type::noperspective:
+					float ac_k = alpha *  in[0]->gl_Position[3] / (alpha * in[2]->gl_Position[3] + (1 - alpha) * in[0]->gl_Position[3]);
+					float bc_k = bravo *  in[2]->gl_Position[3] / (bravo * in[2]->gl_Position[3] + (1 - bravo) * in[1]->gl_Position[3]);
+				
+					//std::cout << "np1" << std::endl;
+					geo[0].data[i] = in[0]->data[i];
+					geo[1].data[i] = (bc_k * in[2]->data[i]) + ((1 - bc_k) * in[1]->data[i]);
+					geo[2].data[i] = (ac_k * in[0]->data[i]) + ((1 - ac_k) * in[2]->data[i]);
+					break;	
+			}
+		}
+
+
 		for (int i = 0; i < 3; i++ )
 		{
 			g[i] = &geo[i];
@@ -410,6 +693,31 @@ void clip_triangle(driver_state& state, const data_geometry* in[3],int face)
 		geo[1].gl_Position = in[1]->gl_Position;
 		geo[2].gl_Position = Pb;
 		
+		for (int i = 0; i < state.floats_per_vertex; i++)
+		{
+			
+			switch(state.interp_rules[i])
+			{
+				case interp_type::smooth:
+					
+					geo[0].data[i] = in[0]->data[i];
+					geo[1].data[i] = in[1]->data[i];
+					geo[2].data[i] = (bravo * in[2]->data[i]) + ((1 - bravo) * in[1]->data[i]);
+					
+					break;
+				case interp_type::noperspective:
+					float ac_np = alpha *  in[0]->gl_Position[3] / (alpha * in[0]->gl_Position[3] + (1 - alpha) * in[2]->gl_Position[3]);
+					float bc_np =  bravo *  in[2]->gl_Position[3]/ (bravo * in[1]->gl_Position[3] + (1 - bravo) * in[1]->gl_Position[3]);
+				
+				
+					geo[0].data[i] = in[0]->data[i];
+					geo[1].data[i] = in[1]->data[i];
+					geo[2].data[i] = (bc_np * in[2]->data[i]) + ((1 - bc_np) * in[1]->data[i]);
+					break;	
+			}
+		}
+		
+		
 		for (int i = 0; i < 3; i++ )
 		{
 			g[i] = &geo[i];
@@ -422,6 +730,7 @@ void clip_triangle(driver_state& state, const data_geometry* in[3],int face)
 	}
     //std::cout<<"TODO: implement clipping. (The current code passes the triangle through without clipping them.)"<<std::endl;
     clip_triangle(state,in,face+1);
+
 }
 
 // Rasterize the triangle defined by the three vertices in the "in" array.  This
@@ -456,10 +765,23 @@ void rasterize_triangle(driver_state& state, const data_geometry* in[3])
     int ymin = std::min(std::min(aj,bj),cj);
     int ymax = std::max(std::max(aj,bj),cj);
 	
-	//std::cout<<"xmin = "<< xmin <<std::endl;
-	//std::cout<<"xmax = "<< xmax <<std::endl;
-	//std::cout<<"ymin = "<< ymin <<std::endl;
-	//std::cout<<"ymax = "<< ymax <<std::endl;
+	if (xmin < 0)
+	{
+		xmin = 0;
+	}
+	else if (xmax > state.image_width)
+	{
+		xmax = state.image_width;
+	}
+	else if (ymin < 0)
+	{
+		ymin = 0;
+	}
+	else if (ymax > state.image_height)
+	{
+		ymax = state.image_height;
+	}
+
     for (int i = xmin; i < xmax; i++)
     {
 
@@ -474,8 +796,6 @@ void rasterize_triangle(driver_state& state, const data_geometry* in[3])
     		float gamma = 0.5 * (((bi * j) - (i * bj)) - 
 			((ai * j) - (i * aj)) +  
 			((ai * bj) - (bi * aj))); 
-
-			//std::cout<<"alpha + bravo + gamma = "<< alpha + bravo + gamma <<std::endl;
 
 			alpha /= area;
 			bravo /= area;
@@ -499,16 +819,17 @@ void rasterize_triangle(driver_state& state, const data_geometry* in[3])
 							fragment.data[i] = in[0]->data[i];
 							break;
 						case interp_type::smooth:
-							float Aprime,Bprime,Cprime, alpha2,bravo2,gamma2;
-							Aprime = ((alpha * in[0]->data[i])/((alpha * in[0]->data[i])+(bravo * in[1]->data[i])+(gamma * in[2]->data[i]) ));
-							Bprime = ((bravo * in[1]->data[i])/((alpha * in[0]->data[i])+(bravo * in[1]->data[i])+(gamma * in[2]->data[i]) ));
-							Cprime = ((gamma * in[2]->data[i])/((alpha * in[0]->data[i])+(bravo * in[1]->data[i])+(gamma * in[2]->data[i]) ));
+											
+							float k, alpha2, bravo2, gamma2;
 							
-							alpha2 = ((Aprime * in[0]->data[i])/((Aprime * in[0]->data[i])+(Bprime * in[1]->data[i])+(Cprime * in[2]->data[i]) )); 
-							bravo2 = ((Bprime * in[1]->data[i])/((Aprime * in[0]->data[i])+(Bprime * in[1]->data[i])+(Cprime * in[2]->data[i]) )); 
-							gamma2 = ((Cprime * in[2]->data[i])/((Aprime * in[0]->data[i])+(Bprime * in[1]->data[i])+(Cprime * in[2]->data[i]) )); 
+							k = (alpha / in[0]->gl_Position[3]) + (bravo / in[1]->gl_Position[3]) + (gamma / in[2]->gl_Position[3]);
+							
+							alpha2 = (alpha / in[0]->gl_Position[3]) / k;
+							bravo2 = (bravo / in[1]->gl_Position[3]) / k;
+							gamma2 = (gamma / in[2]->gl_Position[3]) / k;
 
-							fragment.data[i] = ((alpha2 * in[0]->data[i]) + (bravo2 * in[1]->data[i]) + (gamma2 * in[2]->data[i]));
+							
+							fragment.data[i] = ((alpha2 * in[0]->data[i])   + (bravo2 * in[1]->data[i]) + (gamma2 * in[2]->data[i]));
 
 							break;
 						case interp_type::noperspective:
@@ -518,7 +839,7 @@ void rasterize_triangle(driver_state& state, const data_geometry* in[3])
 				}
 				state.fragment_shader(fragment,output,state.uniform_data);
 				
-				float depth = ((in[0]->gl_Position[2] / in[0]->gl_Position[3]) * alpha) +  ((in[1]->gl_Position[2] / in[1]->gl_Position[3]) * bravo) +  ((in[2]->gl_Position[2] / in[2]->gl_Position[3]) * gamma);  
+				float depth = (in[0]->gl_Position[2] * alpha) +  (in[1]->gl_Position[2] * bravo) +  (in[2]->gl_Position[2] * gamma);  
 				
 				if (depth < state.image_depth[index])
 				{
